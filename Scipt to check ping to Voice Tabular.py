@@ -13,7 +13,10 @@ def main():
         #"bos-3560a": "10.203.108.11",
         #"dal-3560b": "10.209.108.12",
     }
-    ping_list_branches = ["10.217.107.1", "10.217.108.1", "1.1.1.1"]  # Enter only IP's to be pinged. No hostname
+    ping_list_branches = [  # Enter only IP's to be pinged. No hostname
+        "10.217.107.1",
+        "10.217.108.1",
+    ]
     list_output_working_2 = []
     list_output_not_working = []
     list_hostname = []
@@ -52,14 +55,11 @@ def main():
             hostname = c.send_command('sh run | i hostname').split()[1]
             list_output_working_1 = []
             for ping_output in ping_list_branches:
-                print(ping_output)
                 output = c.send_command(f'ping {ping_output} repeat 2')
                 list_output_working_1.append(output)
-                print(output)
             list_hostname.append(hostname)
             list_output_working_2.append(list_output_working_1)
-            print(list_hostname)
-            print(list_output_working_2)
+
         except (NetmikoTimeoutException, NetmikoAuthenticationException) as Error:
             list_output_not_working.append([i])
             continue
