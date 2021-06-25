@@ -6,13 +6,14 @@ from stdiomask import getpass
 from sys import exit
 from tabulate import tabulate
 from os import getcwd
+from time import sleep
 def main():
     hosts_ssh = []
-    ping_branches = {       # Add all the branch IP's  Here. Eg below. Or else Login with Hostname if DNS is enabled on your machine
-        #"bos-3560a": "10.xx.xx.xx",
-        #"dal-3560b": "10.xx.xx.xx",
+    ssh_branches = {       # Add all the branch IP's  Here. Eg below. Or else Login with Hostname if DNS is enabled on your machine
+        #"bos-3560a": "10.203.108.11",
+        #"dal-3560b": "10.209.108.12",
     }
-    list_output_working_1 = []
+    ping_list_branches = ["10.217.107.1", "10.217.108.1", "1.1.1.1"]  # Enter only IP's to be pinged. No hostname
     list_output_working_2 = []
     list_output_not_working = []
     list_hostname = []
@@ -24,7 +25,7 @@ def main():
         if i == "":
             exit("Enter a Branch name and Try again!")
         i = i.lower().replace(" ", "")
-        for k, v in ping_branches.items():
+        for k, v in ssh_branches.items():
             if i == k:
                 hosts_ssh.append(v)
                 break
@@ -49,34 +50,32 @@ def main():
         try:
             c = ConnectHandler(**cisco_881)
             hostname = c.send_command('sh run | i hostname').split()[1]
-            output1 = c.send_command('ping 10.217.107.1 repeat 2')
-            output2 = c.send_command('ping 10.217.108.1 repeat 2')
+            list_output_working_1 = []
+            for ping_output in ping_list_branches:
+                print(ping_output)
+                output = c.send_command(f'ping {ping_output} repeat 2')
+                list_output_working_1.append(output)
+                print(output)
             list_hostname.append(hostname)
-            list_output_working_1.append(output1)
-            list_output_working_2.append(output2)
-
+            list_output_working_2.append(list_output_working_1)
+            print(list_hostname)
+            print(list_output_working_2)
         except (NetmikoTimeoutException, NetmikoAuthenticationException) as Error:
             list_output_not_working.append([i])
             continue
 
-    print("\nProcessing data and Dumping output in a csv file.\n")
-    list_output_working = zip(list_hostname, list_output_working_1, list_output_working_2)
-
-    for host, op1, op2 in list_output_working:
+    print("\nProcessing data and Dumping output in a text file.\n")
+    list_output_working = zip(list_hostname, list_output_working_2)
+    for host, op1 in list_output_working:
         ### For Output 1 ###
-        split_op1 = list(op1.split())
-        if "!" in split_op1[16]:
-            final_output_working.append([host, split_op1[11].split(',')[0], split_op1[20] + "%"])
+        for _ in op1:
+            split_op1 = list(_.split())
+            if "!" in split_op1[16]:
+                final_output_working.append([host, split_op1[11].split(',')[0], split_op1[20] + "%"])
 
-        else:
-            final_output_not_working.append([host, split_op1[11].split(',')[0], "0%"])
+            else:
+                final_output_not_working.append([host, split_op1[11].split(',')[0], "0%"])
 
-        ### For Output 2 ###
-        split_op2 = list(op2.split())
-        if "!" in split_op2[16]:
-            final_output_working.append([host, split_op2[11].split(',')[0], split_op2[20] + "%"])
-        else:
-            final_output_not_working.append([host, split_op2[11].split(',')[0], "0%"])
 
     f = open(f"Ping.txt", "w")
     if final_output_working != []:
@@ -86,9 +85,11 @@ def main():
     if list_output_not_working != []:
         f.writelines(tabulate(list_output_not_working, headers=["Unable to connect to below devices"], tablefmt="pretty") + "\n" + "*"*60 + "\n")
     f.close()
+    sleep(1)
     print("*"*40)
     print(f"Ping.csv file is ready!! File saved in {getcwd()}")
     print("*"*40)
+    sleep(5)
 
 
 if __name__ == "__main__":
